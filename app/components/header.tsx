@@ -26,12 +26,14 @@ export async function Header() {
             >
               Pastes
             </Link>
-            <Link
-              href="/logout"
-              className="flex items-center rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 min-h-[44px]"
-            >
-              Logout
-            </Link>
+            <form action="/logout" method="post">
+              <button
+                type="submit"
+                className="flex cursor-pointer items-center rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 min-h-[44px]"
+              >
+                Logout
+              </button>
+            </form>
           </>
         ) : (
           <Link
