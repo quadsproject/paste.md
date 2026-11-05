@@ -32,6 +32,27 @@ export function deletePasteById(id: string): boolean {
   return result.changes > 0;
 }
 
+export function updatePasteExpiration(
+  id: string,
+  expiresAt: number | null,
+): boolean {
+  const result = db
+    .update(pastes)
+    .set({ expiresAt })
+    .where(eq(pastes.id, id))
+    .run();
+  return result.changes > 0;
+}
+
+export function renamePasteById(id: string, newId: string): boolean {
+  const result = db
+    .update(pastes)
+    .set({ id: newId })
+    .where(eq(pastes.id, id))
+    .run();
+  return result.changes > 0;
+}
+
 export function deleteExpiredPastes(): number {
   const now = Math.floor(Date.now() / 1000);
   const result = db

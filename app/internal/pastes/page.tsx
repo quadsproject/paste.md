@@ -1,5 +1,9 @@
+import { redirect } from "next/navigation";
 import { getAllPastes } from "@/lib/db/queries";
 import { DeletePasteButton } from "./delete-paste-button";
+import { ExpirationSelect } from "./expiration-select";
+import { RenamePaste } from "./rename-paste";
+import { getSessionFromCookies, isUsernameAuthorized } from "@/lib/session";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -10,24 +14,12 @@ function formatDate(unix: number): string {
   return new Date(unix * 1000).toISOString().replace("T", " ").slice(0, 19) + " UTC";
 }
 
-function formatExpiration(expiresAt: number | null): string {
-  if (expiresAt === null) return "Never";
-  const now = Math.floor(Date.now() / 1000);
-  const remaining = expiresAt - now;
-  if (remaining <= 0) return "Expired";
-  if (remaining < 3600) {
-    const minutes = Math.max(1, Math.round(remaining / 60));
-    return `${minutes}m`;
-  }
-  if (remaining < 86400) {
-    const hours = Math.round(remaining / 3600);
-    return `${hours}h`;
-  }
-  const days = Math.round(remaining / 86400);
-  return `${days}d`;
-}
-
 export default async function InternalPastesPage() {
+  const session = await getSessionFromCookies();
+  if (!session || !isUsernameAuthorized(session)) {
+    redirect("/login");
+  }
+
   const pastes = getAllPastes();
 
   return (
@@ -48,6 +40,7 @@ export default async function InternalPastesPage() {
                 <th className="py-3 pr-4">Created</th>
                 <th className="py-3 pr-4">Expires</th>
                 <th className="py-3 pr-4 text-right">Size</th>
+                <th className="py-3 pr-4">Rename</th>
                 <th className="py-3 w-12"></th>
               </tr>
             </thead>
@@ -65,11 +58,18 @@ export default async function InternalPastesPage() {
                   <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                     {formatDate(paste.createdAt)}
                   </td>
-                  <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-300">
-                    {formatExpiration(paste.expiresAt)}
+                  <td className="py-2.5 pr-4">
+                    <ExpirationSelect
+                      pasteId={paste.id}
+                      createdAt={paste.createdAt}
+                      expiresAt={paste.expiresAt}
+                    />
                   </td>
                   <td className="py-2.5 pr-4 text-right text-gray-600 dark:text-gray-300 whitespace-nowrap">
                     {formatSize(paste.sizeBytes)}
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    <RenamePaste pasteId={paste.id} />
                   </td>
                   <td className="py-2.5 text-center">
                     <DeletePasteButton pasteId={paste.id} />
