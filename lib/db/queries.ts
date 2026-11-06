@@ -44,24 +44,27 @@ export function updatePasteExpiration(
   return result.changes > 0;
 }
 
-export function renamePasteById(id: string, newId: string): boolean {
+export type RenameResult = "renamed" | "not-found" | "name-taken";
+
+export function renamePasteById(id: string, newId: string): RenameResult {
   try {
     const result = db
       .update(pastes)
       .set({ id: newId })
       .where(eq(pastes.id, id))
       .run();
-    return result.changes > 0;
+    return result.changes > 0 ? "renamed" : "not-found";
   } catch (error) {
     // Renaming onto an existing name trips the id primary key, and
     // SQLite raises instead of reporting zero changes. Report it as a
-    // failed rename so callers can show a message; rethrow the rest.
+    // distinct outcome so callers can tell it apart from a missing
+    // row; rethrow anything else.
     const code = (error as { code?: string } | null)?.code;
     if (
       code === "SQLITE_CONSTRAINT_PRIMARYKEY" ||
       code === "SQLITE_CONSTRAINT_UNIQUE"
     ) {
-      return false;
+      return "name-taken";
     }
     throw error;
   }
