@@ -56,8 +56,11 @@ export async function renamePasteAction(
   if (newId.trim() === id) {
     return { success: false, error: "New name is the same as the current one" };
   }
-  const renamed = renamePasteById(id, newId.trim());
-  if (!renamed) {
+  const result = renamePasteById(id, newId.trim());
+  if (result === "not-found") {
+    return { success: false, error: "That paste no longer exists" };
+  }
+  if (result === "name-taken") {
     return { success: false, error: "That paste name is already in use" };
   }
   revalidatePath("/internal/pastes");

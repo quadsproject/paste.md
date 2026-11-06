@@ -5,6 +5,7 @@ import {
   getPasteById,
   deleteExpiredPastes,
   updatePasteExpiration,
+  renamePasteById,
 } from "@/lib/db/queries";
 import { pastes } from "@/lib/db/schema";
 import { like } from "drizzle-orm";
@@ -156,5 +157,69 @@ describe("query functions", () => {
 
   it("updatePasteExpiration returns false for a non-existent paste", () => {
     expect(updatePasteExpiration("nonexistent", 5000)).toBe(false);
+  });
+
+  it("renamePasteById renames a paste to an unused name", () => {
+    const now = Math.floor(Date.now() / 1000);
+    createPaste({
+      id: "test-ren-a",
+      content: "original",
+      createdAt: now,
+      expiresAt: null,
+      sizeBytes: 8,
+    });
+
+    expect(renamePasteById("test-ren-a", "test-ren-b")).toBe("renamed");
+    expect(getPasteById("test-ren-a")).toBeUndefined();
+    expect(getPasteById("test-ren-b")!.content).toBe("original");
+  });
+
+  it("renamePasteById reports name-taken when the new name exists", () => {
+    const now = Math.floor(Date.now() / 1000);
+    createPaste({
+      id: "test-dup-src",
+      content: "source",
+      createdAt: now,
+      expiresAt: null,
+      sizeBytes: 6,
+    });
+    createPaste({
+      id: "test-dup-dst",
+      content: "target",
+      createdAt: now,
+      expiresAt: null,
+      sizeBytes: 6,
+    });
+
+    // The id primary key collision must surface as a name-taken
+    // result rather than a thrown constraint error.
+    expect(renamePasteById("test-dup-src", "test-dup-dst")).toBe(
+      "name-taken",
+    );
+
+    // Both rows must survive unchanged.
+    expect(getPasteById("test-dup-src")!.content).toBe("source");
+    expect(getPasteById("test-dup-dst")!.content).toBe("target");
+  });
+
+  it("renamePasteById reports not-found for a missing paste", () => {
+    expect(renamePasteById("nonexistent", "test-ren-gone")).toBe("not-found");
+  });
+
+  it("renamePasteById tells a missing paste apart from a taken name", () => {
+    const now = Math.floor(Date.now() / 1000);
+    createPaste({
+      id: "test-split-dst",
+      content: "target",
+      createdAt: now,
+      expiresAt: null,
+      sizeBytes: 6,
+    });
+
+    // Same destination name, but the source row does not exist: the
+    // caller must not be told the name is taken.
+    expect(renamePasteById("test-split-missing", "test-split-dst")).toBe(
+      "not-found",
+    );
   });
 });

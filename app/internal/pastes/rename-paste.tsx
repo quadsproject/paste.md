@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { renamePasteAction } from "./actions";
+import { useToast } from "./toast";
 
 interface RenamePasteProps {
   pasteId: string;
@@ -9,16 +10,17 @@ interface RenamePasteProps {
 
 export function RenamePaste({ pasteId }: RenamePasteProps) {
   const [name, setName] = useState("");
-  const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+  // Errors go to the page's shared toast so the dashboard column
+  // keeps its width instead of stretching to fit the message.
+  const showToast = useToast();
 
   function handleRename(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
     startTransition(async () => {
       const result = await renamePasteAction(pasteId, name);
       if (!result.success) {
-        setError(result.error ?? "Failed to rename paste.");
+        showToast(result.error ?? "Failed to rename paste.");
       }
     });
   }
@@ -72,9 +74,6 @@ export function RenamePaste({ pasteId }: RenamePasteProps) {
           </svg>
         )}
       </button>
-      {error && (
-        <span className="text-xs text-red-600 dark:text-red-400">{error}</span>
-      )}
     </form>
   );
 }
